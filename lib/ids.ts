@@ -38,5 +38,6 @@ export function commitUrl(submissionId: string): string {
 }
 
 export function fileUrl(storageKey: string): string {
+  if (storageKey.startsWith("http://") || storageKey.startsWith("https://")) return storageKey;
   return `${CREATOR_BASE_URL}/api/files/${storageKey}`;
 }

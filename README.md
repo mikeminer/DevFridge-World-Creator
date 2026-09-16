@@ -64,6 +64,8 @@ App: http://localhost:3020
 Health: http://localhost:3020/api/health  
 Manifest: http://localhost:3020/v1/world/manifest.json
 
+The 3D previewer (`/creator/[id]/preview`) is meant to run on **Vercel**. Discord "Open 3D Preview" uses `CREATOR_BASE_URL`. After a GLB is generated, the bot publishes it to that origin (`POST /api/v1/preview/publish`) so the viewer does not depend on the local disk.
+
 Without `MESHY_API_KEY`, generation uses a placeholder GLB so the Discord → preview → review → quote loop can be tested.
 
 ## Put the bot in Discord

@@ -153,6 +153,21 @@ async function ingestGlb(
       metadata: { sha256: sha, bytes: glb.length, version },
     });
   });
+  const published = await withStore((db) => db.submissions.find((s) => s.id === submissionId));
+  if (published) {
+    const { publishGeneratedPreview } = await import("../preview/push");
+    await publishGeneratedPreview({
+      id: published.id,
+      publicId: published.publicId,
+      name: published.name,
+      projectName: published.projectName,
+      status: published.status,
+      version,
+      fileBytes: glb.length,
+      sha256: sha,
+      glb,
+    }).catch((err) => console.error("preview publish", err));
+  }
   await notifyGenerationReady(submissionId);
 }
 

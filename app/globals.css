@@ -41,7 +41,48 @@ h1 { font-size: 28px; margin: 0 0 8px; }
 .steps { display: grid; gap: 10px; margin: 22px 0; }
 .step { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: start; }
 .step b { color: var(--sauce); }
-#preview-canvas { width: 100%; height: 420px; border-radius: 16px; background: #070b14; display: block; }
+#preview-canvas { width: 100%; height: 100%; border-radius: 0; background: #070b14; display: block; }
 .status { margin-top: 16px; white-space: pre-wrap; }
 .warn { color: #fbbf24; }
 code { font-size: 13px; background: #070b14; padding: 2px 6px; border-radius: 6px; }
+
+.preview-page { padding: 20px 20px 64px; max-width: 1200px; margin: 0 auto; }
+.preview-head { margin-bottom: 16px; }
+.stage-wrap { display: grid; grid-template-columns: 1fr minmax(240px, 300px); gap: 18px; align-items: start; }
+.stage {
+  position: relative;
+  min-height: 560px;
+  height: min(70vh, 720px);
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #070b14;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 48px rgba(79,195,247,0.08);
+}
+.stage-loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  margin: 0; color: var(--ice); letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px;
+}
+.stage-hint {
+  position: absolute; left: 16px; bottom: 16px; margin: 0;
+  font-size: 11px; letter-spacing: 0.14em; color: var(--muted);
+}
+.stage-toolbar {
+  position: absolute; right: 12px; top: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;
+  max-width: 70%;
+}
+.stage-toolbar .btn { min-height: 32px; padding: 6px 10px; font-size: 12px; }
+.file-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 20px;
+}
+.file-card h2 { margin: 4px 0 8px; font-size: 22px; }
+.file-meta { display: grid; gap: 10px; margin: 16px 0; }
+.file-meta dt { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.file-meta dd { margin: 2px 0 0; }
+@media (max-width: 840px) {
+  .stage-wrap { grid-template-columns: 1fr; }
+  .stage { height: 64vh; min-height: 420px; }
+}
