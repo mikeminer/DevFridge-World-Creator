@@ -5,6 +5,9 @@ dist/
 .env
 .env.local
 .env.*.local
+.playwright-chrome/
+scripts/__pycache__/
+__pycache__/
 data/
 coverage/
 *.log

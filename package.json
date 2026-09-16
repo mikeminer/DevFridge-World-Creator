@@ -11,7 +11,8 @@
     "discord:register": "tsx scripts/register-commands.ts",
     "discord:intro": "tsx scripts/post-intro.ts",
     "discord:bot": "tsx scripts/discord-bot.ts",
-    "discord:dashboard": "py -3 scripts/dashboard.py"
+    "discord:dashboard": "py -3 scripts/dashboard.py",
+    "discord:portal": "py -3 scripts/setup-discord-portal.py"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.13",
