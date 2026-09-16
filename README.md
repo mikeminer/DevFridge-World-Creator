@@ -1,17 +1,124 @@
-## 1. Executive summary
+# DevFridge World Creator
 
-**DevFridge World Creator SDK for Discord** is a creator onboarding system that allows a Discord user to:
+Discord-native pipeline so an **external meme community** can submit a playable character into the standard flow for **next seasons** of [DevFridge World](https://world.devfridge.cool).
 
-1. open a DevFridge creator flow directly from Discord;
-2. upload one or more reference images;
-3. provide asset metadata and confirm that they have the necessary rights to use the source material;
-4. have an AI provider generate a game-ready 3D asset;
-5. preview the generated asset;
-6. approve the generated result and request publication;
-7. submit the asset to DevFridge for moderation/review;
-8. receive a **$PASTA commitment quote**;
-9. connect a Solana wallet and create the required DevFridge commitment;
-10. have the asset become eligible in **DevFridge World** for the same period covered by the commitment;
-11. opt the asset out of the game at any time;
-12. redeem the commitment according to the DevFridge smart-contract rules when the lock has matured;
-13. have the protocol apply the current **2% $PASTA burn on redemption/claim**.
+Current World (see [docs.devfridge.cool/world](https://docs.devfridge.cool/world)) is the official ten-character kitchen, gated by 500,000 actively timelocked character tokens. World Creator does **not** mint you into that cast. It is the onboarding rail for later seasons:
+
+```text
+Discord /world create
+  → source image(s) + rights declaration
+  → AI image-to-3D (GLB)
+  → creator preview + confirm
+  → DevFridge review
+  → $PASTA commitment (Fridge time-lock)
+  → eligibility while the verified lock window is active
+  → community adoption
+```
+
+Architecture spec: [`DEVFRIDGE_WORLD_CREATOR_SDK_DISCORD.md`](./DEVFRIDGE_WORLD_CREATOR_SDK_DISCORD.md)
+
+## Discord target
+
+Installed against the DevFridge guild / creator channel:
+
+https://discord.com/channels/1190606959246835764/1549687923350175784
+
+| | |
+|---|---|
+| Guild | `1190606959246835764` |
+| Channel | `1549687923350175784` |
+
+### Creator commands
+
+`/world create` · `/world status` · `/world preview` · `/world my-assets` · `/world optout` · `/world report` · `/world help`
+
+### Admin commands
+
+`/world-admin queue` · `review` · `approve` · `reject` · `quote` · `suspend` · `restore`
+
+`/world create` only works in the creator channel.
+
+## What a commitment is (and is not)
+
+Commit $PASTA to activate the character for a defined period. The principal stays under [DevFridge time-lock](https://docs.devfridge.cool/fridge) rules. When the lock matures, redemption follows the protocol, including the current **2% $PASTA burn**.
+
+A commitment:
+
+- is **not** an IP license
+- is **not** a conventional listing fee paid to DevFridge
+- does **not** protect market cap
+- does **not** unlock early if the creator opts the asset out of the game
+
+$PASTA mint: `39kMeX4HVRW9qbbiHSPbRQ9xeXUF18GrNP6gL61Ppump` · ticker ≠ identity.
+
+## Run locally
+
+```bash
+npm install
+cp .env.example .env
+npm test
+npm run dev
+```
+
+App: http://localhost:3020  
+Health: http://localhost:3020/api/health  
+Manifest: http://localhost:3020/v1/world/manifest.json
+
+Without `MESHY_API_KEY`, generation uses a placeholder GLB so the Discord → preview → review → quote loop can be tested.
+
+## Put the bot in Discord
+
+1. Create an application at [Discord Developer Portal](https://discord.com/developers/applications).
+2. Bot → Add Bot. Copy the token into `DISCORD_BOT_TOKEN`.
+3. General Information → copy Application ID and Public Key.
+4. Turn on no privileged intents. The bot only needs slash commands + send messages.
+5. Set **Interactions Endpoint URL** to `https://YOUR_DOMAIN/api/discord/interactions` (the endpoint must be publicly reachable and return PONG to Discord's ping).
+6. Invite URL (send messages + embeds + attach files + view channel):
+
+```
+https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&permissions=52224&scope=bot%20applications.commands&guild_id=1190606959246835764
+```
+
+7. Register guild commands and post the channel intro:
+
+```bash
+npm run discord:register
+npm run discord:intro
+```
+
+8. In the creator channel run `/world help`, then `/world create`.
+
+`DISCORD_ADMIN_USER_IDS` (comma-separated) or Administrator permission is required for `/world-admin`. Set `DISCORD_REVIEW_CHANNEL_ID` if review cards should go to a private channel instead of the creator channel.
+
+## World game integration
+
+The game should **not** duplicate eligibility logic. Fetch the signed-down manifest and lazy-load GLBs:
+
+```ts
+const manifest = await fetch("https://YOUR_DOMAIN/v1/world/manifest.json").then((r) => r.json());
+for (const asset of manifest.assets) {
+  // lazy-load asset.glb_url — never treat a provider URL as production
+}
+```
+
+Eligibility is computed in `lib/eligibility.ts` (`isWorldAssetEligible`). Discord, the commit page, and the manifest all reuse it.
+
+## Deploy
+
+Vercel is the intended host (`vercel.json` includes generation + reconcile crons).
+
+Required production env: `DISCORD_APPLICATION_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_BOT_TOKEN`, `CREATOR_BASE_URL`, `SESSION_SECRET`, `CRON_SECRET`.
+
+For serverless persistence set `DATABASE_URL` (Postgres). Locally the app uses `data/store.json` + `data/storage/`.
+
+Optional: `MESHY_API_KEY` + `THREED_PROVIDER=meshy` for real image-to-3D. The source image URL must be publicly fetchable.
+
+## Claims the product copy will not make
+
+- Not “pay us to list your meme”
+- Not “guaranteed exposure”
+- Not “the SDK protects $PASTA market cap”
+- Not “audited / safe / certified”
+- Not “World pays you to play”
+
+Official contacts live only on [connect.devfridge.cool](https://connect.devfridge.cool).

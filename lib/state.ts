@@ -1,0 +1,37 @@
+import type { SubmissionStatus } from "./types";
+
+const TRANSITIONS: Record<SubmissionStatus, SubmissionStatus[]> = {
+  DRAFT: ["SOURCE_RECEIVED", "CANCELLED"],
+  SOURCE_RECEIVED: ["RIGHTS_ATTESTED", "CANCELLED"],
+  RIGHTS_ATTESTED: ["GENERATION_QUEUED", "CANCELLED"],
+  GENERATION_QUEUED: ["GENERATING", "CANCELLED"],
+  GENERATING: ["GENERATED", "GENERATION_QUEUED", "CANCELLED"],
+  GENERATED: ["PREVIEW_READY", "GENERATION_QUEUED"],
+  PREVIEW_READY: ["CREATOR_CONFIRMED", "GENERATION_QUEUED", "CANCELLED"],
+  CREATOR_CONFIRMED: ["PUBLICATION_REQUESTED", "CANCELLED"],
+  PUBLICATION_REQUESTED: ["UNDER_REVIEW"],
+  UNDER_REVIEW: ["REJECTED", "CHANGES_REQUESTED", "APPROVED_FOR_COMMITMENT"],
+  REJECTED: ["CANCELLED"],
+  CHANGES_REQUESTED: ["PREVIEW_READY", "GENERATION_QUEUED", "CANCELLED"],
+  APPROVED_FOR_COMMITMENT: ["QUOTE_ISSUED"],
+  QUOTE_ISSUED: ["COMMITMENT_PENDING", "QUOTE_ISSUED", "CANCELLED"],
+  COMMITMENT_PENDING: ["COMMITMENT_CONFIRMED", "QUOTE_ISSUED"],
+  COMMITMENT_CONFIRMED: ["SCHEDULED", "ACTIVE"],
+  SCHEDULED: ["ACTIVE", "OPTED_OUT", "SUSPENDED", "REMOVED"],
+  ACTIVE: ["OPTED_OUT", "SUSPENDED", "REMOVED", "EXPIRED"],
+  OPTED_OUT: ["REMOVED"],
+  SUSPENDED: ["ACTIVE", "REMOVED", "EXPIRED"],
+  REMOVED: [],
+  EXPIRED: [],
+  CANCELLED: [],
+};
+
+export function canTransition(from: SubmissionStatus, to: SubmissionStatus): boolean {
+  return TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export function assertTransition(from: SubmissionStatus, to: SubmissionStatus): void {
+  if (!canTransition(from, to)) {
+    throw new Error(`Illegal submission transition ${from} → ${to}`);
+  }
+}
