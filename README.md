@@ -91,7 +91,13 @@ DISCORD_REVIEW_GUILD_ID=1190606959246835764
 DISCORD_CREATOR_CHANNEL_ID=1549687923350175784
 ```
 
-6. Keep this process running:
+6. Apri la dashboard Tkinter, incolla ID / Public Key / Bot Token, **Salva**, poi **Avvia bot**:
+
+```bash
+npm run discord:dashboard
+```
+
+O doppio click su `apri-dashboard.bat`. In alternativa, dopo aver salvato `.env`:
 
 ```bash
 npm run discord:bot

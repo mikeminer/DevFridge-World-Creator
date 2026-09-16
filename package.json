@@ -10,7 +10,8 @@
     "test": "tsx --test tests/*.test.ts",
     "discord:register": "tsx scripts/register-commands.ts",
     "discord:intro": "tsx scripts/post-intro.ts",
-    "discord:bot": "tsx scripts/discord-bot.ts"
+    "discord:bot": "tsx scripts/discord-bot.ts",
+    "discord:dashboard": "py -3 scripts/dashboard.py"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.13",
