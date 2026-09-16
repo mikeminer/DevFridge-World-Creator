@@ -1,3 +1,4 @@
+import "./load-env";
 import { registerGuildCommands } from "../lib/discord/register";
 
 async function main() {

@@ -1,3 +1,4 @@
+import "./load-env";
 import { COMMITMENT_COPY, TAGLINE } from "../lib/copy";
 import { DISCORD_BOT_TOKEN, DISCORD_CREATOR_CHANNEL_ID, PASTA_MINT, WORLD_URL } from "../lib/config";
 

@@ -2,9 +2,9 @@
  * Gateway bot: slash commands work without a public Interactions Endpoint URL.
  * Leave the Developer Portal endpoint EMPTY while this process is running.
  *
- *   cp .env.example .env   # fill DISCORD_* 
  *   npm run discord:bot
  */
+import "./load-env";
 import { DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID } from "../lib/config";
 import { handleInteraction } from "../lib/discord/handlers";
 import { registerGuildCommands } from "../lib/discord/register";
