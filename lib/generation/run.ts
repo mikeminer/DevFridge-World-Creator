@@ -1,7 +1,7 @@
-import { CREATOR_BASE_URL, GENERATION_MAX_ATTEMPTS, MESHY_API_KEY, THREED_PROVIDER } from "../config";
+import { GENERATION_MAX_ATTEMPTS, MESHY_API_KEY, THREED_PROVIDER } from "../config";
 import { notifyGenerationReady } from "../discord/notify";
-import { fileUrl, sha256Hex, uuid } from "../ids";
-import { downloadUrl, saveBuffer } from "../ingest/images";
+import { sha256Hex, uuid } from "../ids";
+import { downloadUrl, readBuffer, saveBuffer, toDataUri } from "../ingest/images";
 import { appendAudit, withStore } from "../store";
 import { assertTransition } from "../state";
 import { inspectGlb, buildPlaceholderGlb } from "./placeholder";
@@ -16,14 +16,15 @@ export async function queueGeneration(submissionId: string): Promise<void> {
     if (attempts >= GENERATION_MAX_ATTEMPTS) {
       throw new Error(`generation limit reached (${GENERATION_MAX_ATTEMPTS})`);
     }
+    const provider = resolveProvider();
     sub.status = "GENERATION_QUEUED";
     sub.updatedAt = new Date().toISOString();
     db.generationJobs.push({
       id: uuid(),
       submissionId,
-      provider: THREED_PROVIDER === "meshy" && MESHY_API_KEY ? "meshy" : "placeholder",
+      provider,
       providerTaskId: null,
-      model: THREED_PROVIDER === "meshy" ? "meshy-5" : "placeholder-box",
+      model: provider === "meshy" ? process.env.MESHY_AI_MODEL || "latest" : "placeholder-box",
       status: "QUEUED",
       attempt: attempts + 1,
       costUnits: null,
@@ -40,6 +41,32 @@ export async function queueGeneration(submissionId: string): Promise<void> {
       metadata: { attempt: attempts + 1 },
     });
   });
+}
+
+function resolveProvider(): "meshy" | "placeholder" {
+  if (THREED_PROVIDER === "placeholder") return "placeholder";
+  if (THREED_PROVIDER === "meshy" || MESHY_API_KEY) {
+    if (!MESHY_API_KEY) {
+      throw new Error("Set MESHY_API_KEY in World Creator settings (AI 3D) before generating a character");
+    }
+    return "meshy";
+  }
+  return "placeholder";
+}
+
+export async function waitForGeneration(submissionId: string, attempts = 90): Promise<void> {
+  await queueGeneration(submissionId);
+  for (let i = 0; i < attempts; i++) {
+    await processQueuedJobs();
+    const busy = await withStore((db) =>
+      db.generationJobs.some(
+        (j) => j.submissionId === submissionId && (j.status === "QUEUED" || j.status === "RUNNING")
+      )
+    );
+    if (!busy) return;
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+  throw new Error("3D generation timed out — check the Meshy API key and credits in settings");
 }
 
 export async function processQueuedJobs(): Promise<number> {
@@ -77,11 +104,11 @@ async function startJob(jobId: string): Promise<void> {
   });
 
   if (ctx.job.provider === "meshy") {
-    const imageUrl = fileUrl(ctx.sources[0].storageKey);
-    if (!CREATOR_BASE_URL.startsWith("https://")) {
-      throw new Error("Meshy needs a public CREATOR_BASE_URL so it can fetch the source image");
-    }
-    const taskId = await createMeshyTask(imageUrl, ctx.sub.description);
+    const source = ctx.sources[0];
+    if (!source) throw new Error("no source image for Meshy");
+    const buf = await readBuffer(source.storageKey);
+    const dataUri = toDataUri(buf, source.mimeType || "image/png");
+    const taskId = await createMeshyTask(dataUri, ctx.sub.name, ctx.sub.description);
     await withStore((db) => {
       const job = db.generationJobs.find((j) => j.id === jobId);
       if (job) job.providerTaskId = taskId;

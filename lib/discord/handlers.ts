@@ -18,7 +18,7 @@ import {
   baseUnitsToPasta,
 } from "../config";
 import { COMMITMENT_COPY, HELP_TEXT, OPTOUT_COPY, submissionCreatedMessage, GENERATION_RIGHTS_STATEMENT } from "../copy";
-import { processQueuedJobs } from "../generation/run";
+import { waitForGeneration } from "../generation/run";
 import { commitUrl, previewUrl } from "../ids";
 import {
   acceptRights,
@@ -36,7 +36,6 @@ import {
   requestChanges,
   requestPublication,
   restoreAsset,
-  startGeneration,
   suspendAsset,
 } from "../sdk";
 import { readStore } from "../store";
@@ -352,8 +351,7 @@ async function handleComponent(i: Interaction): Promise<unknown> {
       const sub = await acceptRights(id, user.id, i.id, "generation");
       keepAlive(
         (async () => {
-          await startGeneration(sub.id);
-          await processQueuedJobs();
+          await waitForGeneration(sub.id);
         })()
       );
       return update(
@@ -373,8 +371,7 @@ async function handleComponent(i: Interaction): Promise<unknown> {
       if (sub.discordUserId !== user.id) return ephemeral("Not your submission.");
       keepAlive(
         (async () => {
-          await startGeneration(sub.id);
-          await processQueuedJobs();
+          await waitForGeneration(sub.id);
         })()
       );
       return update(`Regeneration queued for **${sub.publicId}** (max ${3} attempts).`);

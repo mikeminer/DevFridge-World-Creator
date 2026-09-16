@@ -1,9 +1,30 @@
 import { MESHY_API_KEY } from "../config";
+import { characterPrompt } from "./style";
 
-const BASE = "https://api.meshy.ai/openapi/v2";
+const BASE = "https://api.meshy.ai/openapi/v1";
 
-export async function createMeshyTask(imageUrl: string, prompt?: string): Promise<string> {
-  if (!MESHY_API_KEY) throw new Error("MESHY_API_KEY is not set");
+export function meshyAiModel(): string {
+  return process.env.MESHY_AI_MODEL || "latest";
+}
+
+export async function testMeshyKey(key = MESHY_API_KEY): Promise<{ ok: boolean; detail: string }> {
+  if (!key) return { ok: false, detail: "MESHY_API_KEY is empty" };
+  const res = await fetch(`${BASE}/image-to-3d`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, detail: `Meshy rejected the key (${res.status})` };
+  }
+  return { ok: true, detail: `Meshy reachable (${res.status})` };
+}
+
+export async function createMeshyTask(
+  imageDataUriOrUrl: string,
+  name?: string,
+  description?: string
+): Promise<string> {
+  if (!MESHY_API_KEY) throw new Error("MESHY_API_KEY is not set — save it in World Creator settings");
   const res = await fetch(`${BASE}/image-to-3d`, {
     method: "POST",
     headers: {
@@ -11,15 +32,16 @@ export async function createMeshyTask(imageUrl: string, prompt?: string): Promis
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      image_url: imageUrl,
+      image_url: imageDataUriOrUrl,
       enable_pbr: true,
       should_remesh: true,
+      should_texture: true,
       topology: "triangle",
       target_polycount: 40000,
-      ai_model: "meshy-5",
-      prompt:
-        prompt ||
-        "Create a stylized game-ready 3D character based on the provided reference. Preserve key visual identity, clean silhouette, no environment, no text, full character, centered, PBR, WebGL/Three.js GLB.",
+      pose_mode: "a-pose",
+      target_formats: ["glb"],
+      ai_model: meshyAiModel(),
+      prompt: characterPrompt(name || "", description || ""),
     }),
   });
   const body = (await res.json()) as { result?: string; message?: string };
@@ -50,5 +72,5 @@ export async function getMeshyTask(taskId: string): Promise<
   if (status === "FAILED" || status === "CANCELED") {
     return { status: "FAILED", error: body.task_error?.message || status };
   }
-  return { status: status === "IN_PROGRESS" ? "RUNNING" : "PENDING" };
+  return { status: status === "IN_PROGRESS" || status === "PROCESSING" ? "RUNNING" : "PENDING" };
 }

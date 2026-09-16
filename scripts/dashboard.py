@@ -10,6 +10,8 @@ import threading
 import webbrowser
 from pathlib import Path
 from tkinter import BooleanVar, StringVar, Tk, messagebox, ttk
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from tkinter.scrolledtext import ScrolledText
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,9 +29,17 @@ FIELDS = [
     ("Server", "DISCORD_REVIEW_CHANNEL_ID", "Canale review", False),
     ("Server", "DISCORD_ADMIN_USER_IDS", "Admin user IDs (comma)", False),
     ("App", "CREATOR_BASE_URL", "Creator base URL", False),
-    ("App", "THREED_PROVIDER", "3D provider (placeholder|meshy)", False),
-    ("App", "MESHY_API_KEY", "Meshy API key", True),
+    ("AI 3D (Three.js GLB)", "THREED_PROVIDER", "Provider", False),
+    ("AI 3D (Three.js GLB)", "MESHY_API_KEY", "Meshy API key", True),
+    ("AI 3D (Three.js GLB)", "MESHY_AI_MODEL", "Meshy model", False),
+    ("AI 3D (Three.js GLB)", "STYLE_PRESET", "Character style", False),
 ]
+
+COMBOS = {
+    "THREED_PROVIDER": ("meshy", "placeholder"),
+    "MESHY_AI_MODEL": ("latest", "meshy-5", "meshy-6", "meshy-7"),
+    "STYLE_PRESET": ("pastacast",),
+}
 
 
 def parse_env(text: str) -> dict[str, str]:
@@ -90,8 +100,8 @@ class Dashboard:
     def __init__(self, root: Tk) -> None:
         self.root = root
         self.root.title("DevFridge World Creator")
-        self.root.geometry("820x760")
-        self.root.minsize(720, 640)
+        self.root.geometry("900x860")
+        self.root.minsize(760, 700)
         self.vars: dict[str, StringVar] = {}
         self.entries: dict[str, ttk.Entry] = {}
         self.show_secrets = BooleanVar(value=False)
@@ -106,7 +116,7 @@ class Dashboard:
         ttk.Label(header, text="DevFridge World Creator", font=("Segoe UI", 16, "bold")).pack(anchor="w")
         ttk.Label(
             header,
-            text="Imposta e salva i parametri Discord. Poi avvia il bot da qui.",
+            text="Discord + AI 3D. I personaggi sono GLB Three.js in stile cucina PASTA/CAST. Incolla la Meshy API key sotto.",
         ).pack(anchor="w")
 
         form = ttk.Frame(self.root)
@@ -123,9 +133,13 @@ class Dashboard:
             ttk.Label(form, text=label).grid(row=row, column=0, sticky="w", padx=(0, 8), pady=3)
             var = StringVar()
             self.vars[key] = var
-            entry = ttk.Entry(form, textvariable=var, width=72, show="*" if secret else "")
-            entry.grid(row=row, column=1, sticky="ew", pady=3)
-            self.entries[key] = entry
+            if key in COMBOS:
+                combo = ttk.Combobox(form, textvariable=var, values=COMBOS[key], width=69, state="readonly")
+                combo.grid(row=row, column=1, sticky="ew", pady=3)
+            else:
+                entry = ttk.Entry(form, textvariable=var, width=72, show="*" if secret else "")
+                entry.grid(row=row, column=1, sticky="ew", pady=3)
+                self.entries[key] = entry
             form.columnconfigure(1, weight=1)
             row += 1
 
@@ -145,6 +159,7 @@ class Dashboard:
         ttk.Button(actions, text="Avvia bot", command=self.start_bot).pack(side="left", padx=4)
         ttk.Button(actions, text="Ferma bot", command=self.stop_bot).pack(side="left", padx=4)
         ttk.Button(actions, text="Registra comandi", command=self.register).pack(side="left", padx=4)
+        ttk.Button(actions, text="Test AI API", command=self.test_ai).pack(side="left", padx=4)
 
         links = ttk.Frame(self.root)
         links.pack(fill="x", **pad)
@@ -194,10 +209,12 @@ class Dashboard:
             for k in ("DISCORD_APPLICATION_ID", "DISCORD_PUBLIC_KEY", "DISCORD_BOT_TOKEN")
             if not values.get(k)
         ]
+        if values.get("THREED_PROVIDER", "meshy") != "placeholder" and not values.get("MESHY_API_KEY"):
+            missing.append("MESHY_API_KEY (AI 3D — Meshy)")
         if missing:
             messagebox.showwarning(
                 "Salvato, ma incompleto",
-                "Mancano:\n- " + "\n- ".join(missing) + "\n\nCopiali dal Discord Developer Portal.",
+                "Mancano:\n- " + "\n- ".join(missing) + "\n\nDiscord: Developer Portal. AI 3D: meshy.ai API keys.",
             )
         else:
             messagebox.showinfo("Salvato", f"Parametri scritti in {ENV_PATH.name}")
@@ -244,6 +261,45 @@ class Dashboard:
         else:
             self.proc.send_signal(signal.SIGTERM)
         self.append("Bot fermato.")
+
+    def test_ai(self) -> None:
+        self.save()
+        values = self.collect()
+        provider = values.get("THREED_PROVIDER") or "meshy"
+        key = values.get("MESHY_API_KEY") or ""
+        if provider == "placeholder":
+            messagebox.showinfo("AI 3D", "Provider = placeholder. I personaggi non useranno Meshy.")
+            return
+        if not key:
+            messagebox.showwarning("AI 3D", "Incolla MESHY_API_KEY, poi Salva e Test AI API.")
+            return
+        threading.Thread(target=self._test_meshy, args=(key,), daemon=True).start()
+
+    def _test_meshy(self, key: str) -> None:
+        req = Request(
+            "https://api.meshy.ai/openapi/v1/image-to-3d",
+            method="GET",
+            headers={"Authorization": f"Bearer {key}"},
+        )
+        try:
+            with urlopen(req, timeout=20) as res:
+                code = res.status
+            detail = f"Meshy reachable ({code})"
+            ok = True
+        except HTTPError as exc:
+            ok = exc.code not in (401, 403)
+            detail = f"Meshy HTTP {exc.code}"
+        except URLError as exc:
+            ok = False
+            detail = str(exc.reason)
+        except Exception as exc:  # noqa: BLE001
+            ok = False
+            detail = str(exc)
+        self.root.after(0, self.append, f"Test AI API: {detail}")
+        if ok:
+            self.root.after(0, lambda: messagebox.showinfo("AI 3D", f"Meshy API ok.\n{detail}"))
+        else:
+            self.root.after(0, lambda: messagebox.showerror("AI 3D", f"Meshy API failed.\n{detail}"))
 
     def register(self) -> None:
         self.save()

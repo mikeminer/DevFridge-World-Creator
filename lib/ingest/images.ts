@@ -48,6 +48,15 @@ export async function saveBuffer(key: string, buf: Buffer): Promise<void> {
   await writeFile(path, buf);
 }
 
+export async function readBuffer(key: string): Promise<Buffer> {
+  const { readFile } = await import("node:fs/promises");
+  return readFile(storagePath(key));
+}
+
+export function toDataUri(buf: Buffer, mime: string): string {
+  return `data:${mime};base64,${buf.toString("base64")}`;
+}
+
 export async function downloadUrl(url: string): Promise<Buffer> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`download failed (${res.status})`);

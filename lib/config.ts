@@ -41,8 +41,11 @@ export const CRON_SECRET = process.env.CRON_SECRET || "";
 
 export const DATABASE_URL = process.env.DATABASE_URL || "";
 
-export const THREED_PROVIDER = (process.env.THREED_PROVIDER || "placeholder").toLowerCase();
 export const MESHY_API_KEY = process.env.MESHY_API_KEY || "";
+export const THREED_PROVIDER = (
+  process.env.THREED_PROVIDER || (MESHY_API_KEY ? "meshy" : "placeholder")
+).toLowerCase();
+export const STYLE_PRESET = (process.env.STYLE_PRESET || "pastacast").toLowerCase();
 
 export const SOLANA_CLUSTER = process.env.SOLANA_CLUSTER || "mainnet-beta";
 export const SOLANA_RPC_URL =

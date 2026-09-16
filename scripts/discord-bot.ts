@@ -128,6 +128,12 @@ async function main() {
   }
   const registered = await registerGuildCommands();
   console.log("commands:", registered.names.map((n) => `/${n}`).join(" "));
+  const { MESHY_API_KEY, THREED_PROVIDER } = await import("../lib/config");
+  if (THREED_PROVIDER !== "placeholder" && !MESHY_API_KEY) {
+    console.warn("MESHY_API_KEY missing — paste it in npm run discord:dashboard (AI 3D) or characters stay blocked");
+  } else {
+    console.log(`3D provider: ${THREED_PROVIDER}${MESHY_API_KEY ? " (Meshy key set)" : ""}`);
+  }
   await connectLoop();
 }
 
