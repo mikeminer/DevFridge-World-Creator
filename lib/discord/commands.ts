@@ -17,6 +17,9 @@ const duration = {
 export const WORLD_COMMAND = {
   name: "world",
   description: "DevFridge World Creator — submit a meme for the next World season",
+  dm_permission: true,
+  integration_types: [0],
+  contexts: [0, 1],
   options: [
     {
       type: SUB,
@@ -97,6 +100,9 @@ export const WORLD_ADMIN_COMMAND = {
   name: "world-admin",
   description: "DevFridge World Creator moderation",
   default_member_permissions: "8",
+  dm_permission: false,
+  integration_types: [0],
+  contexts: [0],
   options: [
     { type: SUB, name: "queue", description: "List submissions under review" },
     {

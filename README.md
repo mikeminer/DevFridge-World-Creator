@@ -68,25 +68,47 @@ Without `MESHY_API_KEY`, generation uses a placeholder GLB so the Discord → pr
 
 ## Put the bot in Discord
 
+Slash commands do **not** appear until a Discord Application exists, the bot is invited to the guild, and `/world` is registered. Code in this repo is not enough by itself.
+
+### Fastest path (gateway, no public URL)
+
 1. Create an application at [Discord Developer Portal](https://discord.com/developers/applications).
-2. Bot → Add Bot. Copy the token into `DISCORD_BOT_TOKEN`.
-3. General Information → copy Application ID and Public Key.
-4. Turn on no privileged intents. The bot only needs slash commands + send messages.
-5. Set **Interactions Endpoint URL** to `https://YOUR_DOMAIN/api/discord/interactions` (the endpoint must be publicly reachable and return PONG to Discord's ping).
-6. Invite URL (send messages + embeds + attach files + view channel):
+2. Bot → Add Bot → copy token. General Information → copy Application ID and Public Key.
+3. **Leave Interactions Endpoint URL empty.**
+4. Invite (send messages + embeds + attach files + view channel):
 
 ```
 https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&permissions=52224&scope=bot%20applications.commands&guild_id=1190606959246835764
 ```
 
-7. Register guild commands and post the channel intro:
+5. Local `.env`:
+
+```
+DISCORD_APPLICATION_ID=...
+DISCORD_PUBLIC_KEY=...
+DISCORD_BOT_TOKEN=...
+DISCORD_REVIEW_GUILD_ID=1190606959246835764
+DISCORD_CREATOR_CHANNEL_ID=1549687923350175784
+```
+
+6. Keep this process running:
+
+```bash
+npm run discord:bot
+```
+
+It registers `/world` + `/world-admin` on the guild and answers interactions. Then in https://discord.com/channels/1190606959246835764/1549687923350175784 type `/world help`.
+
+### Production path (Vercel HTTP endpoint)
+
+Deploy, set the same env vars, then set **Interactions Endpoint URL** to `https://YOUR_DOMAIN/api/discord/interactions`. Discord must be able to PING that URL (valid signature → `{ "type": 1 }`). Then:
 
 ```bash
 npm run discord:register
 npm run discord:intro
 ```
 
-8. In the creator channel run `/world help`, then `/world create`.
+If both a public Interactions Endpoint **and** `discord:bot` are active, Discord may deliver twice — use one or the other.
 
 `DISCORD_ADMIN_USER_IDS` (comma-separated) or Administrator permission is required for `/world-admin`. Set `DISCORD_REVIEW_CHANNEL_ID` if review cards should go to a private channel instead of the creator channel.
 

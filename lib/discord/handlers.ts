@@ -1,4 +1,14 @@
 import { waitUntil } from "@vercel/functions";
+
+function keepAlive(task: Promise<unknown>) {
+  try {
+    waitUntil(task);
+  } catch {
+    /* local / gateway */
+  }
+  void task.catch((err) => console.error("background task", err));
+}
+
 import {
   DISCORD_ADMIN_ROLE_ID,
   DISCORD_ADMIN_USER_IDS,
@@ -174,13 +184,13 @@ function handleCreate(i: Interaction, opts: Record<string, unknown>) {
   const attachments = ["image", "image2", "image3", "image4"]
     .map((k) => {
       const id = opts[k];
-      if (typeof id !== "string") return null;
-      return i.data?.resolved?.attachments?.[id] || null;
+      if (id == null) return null;
+      return i.data?.resolved?.attachments?.[String(id)] || null;
     })
     .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
   const user = actor(i);
-  waitUntil(
+  keepAlive(
     (async () => {
       try {
         const sub = await createSubmission({
@@ -304,7 +314,7 @@ async function handleAdminReview(id: string) {
 async function handleAdminApprove(i: Interaction, id: string) {
   const sub = await approveForCommitment(id, actor(i).id);
   const quote = await issueQuote(sub.id, actor(i).id);
-  waitUntil(notifyQuote(sub.id, quote.requiredAmount, sub.requestedDurationKey));
+  keepAlive(notifyQuote(sub.id, quote.requiredAmount, sub.requestedDurationKey));
   return ephemeral(
     `Approved **${sub.publicId}**. Quote: ${baseUnitsToPasta(quote.requiredAmount)} $PASTA / ${sub.requestedDurationKey}.`
   );
@@ -318,7 +328,7 @@ async function handleAdminReject(i: Interaction, id: string, reason: string) {
 async function handleAdminQuote(i: Interaction, id: string) {
   const quote = await issueQuote(id, actor(i).id);
   const sub = await readStore((db) => findSub(db.submissions, id));
-  waitUntil(notifyQuote(sub.id, quote.requiredAmount, sub.requestedDurationKey));
+  keepAlive(notifyQuote(sub.id, quote.requiredAmount, sub.requestedDurationKey));
   return ephemeral(`Quote issued for **${sub.publicId}**: ${baseUnitsToPasta(quote.requiredAmount)} $PASTA.`);
 }
 
@@ -340,7 +350,7 @@ async function handleComponent(i: Interaction): Promise<unknown> {
   try {
     if (kind === "rights" && action === "accept") {
       const sub = await acceptRights(id, user.id, i.id, "generation");
-      waitUntil(
+      keepAlive(
         (async () => {
           await startGeneration(sub.id);
           await processQueuedJobs();
@@ -361,7 +371,7 @@ async function handleComponent(i: Interaction): Promise<unknown> {
     if (kind === "regen") {
       const sub = await readStore((db) => findSub(db.submissions, id));
       if (sub.discordUserId !== user.id) return ephemeral("Not your submission.");
-      waitUntil(
+      keepAlive(
         (async () => {
           await startGeneration(sub.id);
           await processQueuedJobs();
@@ -375,7 +385,7 @@ async function handleComponent(i: Interaction): Promise<unknown> {
     }
     if (kind === "publish") {
       const sub = await requestPublication(id, user.id);
-      waitUntil(postReviewCard(sub));
+      keepAlive(postReviewCard(sub));
       return update(
         `**${sub.publicId}** sent for DevFridge review. Nothing is eligible in World until approval and a verified $PASTA commitment.`
       );

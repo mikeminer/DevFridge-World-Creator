@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
+import { DISCORD_PUBLIC_KEY } from "@/lib/config";
 import { handleInteraction } from "@/lib/discord/handlers";
 import { verifyDiscordRequest } from "@/lib/discord/verify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+export function GET() {
+  return NextResponse.json({
+    ok: true,
+    service: "devfridge-world-creator",
+    hint: "Discord POSTs interactions here. Set this URL as Interactions Endpoint URL.",
+    publicKeyConfigured: Boolean(DISCORD_PUBLIC_KEY),
+  });
+}
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -11,7 +21,7 @@ export async function POST(req: Request) {
   const timestamp = req.headers.get("x-signature-timestamp");
   const verified = verifyDiscordRequest(body, signature, timestamp);
   if (!verified.ok) {
-    return NextResponse.json({ error: verified.error }, { status: 401 });
+    return new NextResponse("invalid request signature", { status: 401 });
   }
   try {
     const interaction = JSON.parse(body);

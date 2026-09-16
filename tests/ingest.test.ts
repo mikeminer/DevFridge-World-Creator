@@ -21,7 +21,7 @@ describe("ingest", () => {
 });
 
 describe("discord verify", () => {
-  it("rejects missing or stale signatures", () => {
+  it("rejects missing or malformed signatures", () => {
     assert.equal(verifyDiscordRequest("{}", null, "1").ok, false);
     assert.equal(verifyDiscordRequest("{}", "ab", "1").ok, false);
   });
