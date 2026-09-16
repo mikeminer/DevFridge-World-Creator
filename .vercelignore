@@ -1,0 +1,17 @@
+node_modules
+.next
+data
+.playwright-chrome
+scripts/__pycache__
+__pycache__
+assets/discord/step*.png
+assets/discord/crop*.png
+assets/discord/chk*.png
+assets/discord/after-*.png
+assets/discord/m*.png
+assets/discord/*.png
+!assets/discord/icon.png
+!assets/discord/avatar.png
+!assets/discord/cover.png
+.env
+.env.local
